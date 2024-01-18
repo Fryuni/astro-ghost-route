@@ -1,0 +1,22 @@
+---
+import {routeRegistry} from "virtual:ghost-route-registry";
+import {GetStaticPathsResult} from "astro";
+
+export const prerender = true;
+
+export function getStaticPaths(): GetStaticPathsResult {
+    return routeRegistry.map(route => ({params: {path: route.slice(1)}}));
+}
+
+const currentRoute = Astro.url.pathname
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{currentRoute}</title>
+</head>
+<body>
+<h1>{currentRoute}</h1>
+</body>
+</html>
