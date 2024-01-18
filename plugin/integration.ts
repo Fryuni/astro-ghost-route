@@ -1,4 +1,4 @@
-import type {AstroIntegration, RouteData} from "astro";
+import type {AstroIntegration} from "astro";
 import {fileURLToPath} from "node:url";
 
 
@@ -14,12 +14,19 @@ export default function ghostRouteIntegration(options: Options): AstroIntegratio
     return {
         name: 'demo-ghost-route',
         hooks: {
-            "astro:config:setup": ({injectRoute, updateConfig, command}) => {
+            "astro:config:setup": ({
+                                       injectRoute,
+                                       updateConfig,
+                                       addWatchFile,
+                                       command,
+                                   }) => {
                 injectRoute({
                     pattern: '[...path]',
                     entrypoint: ghostEntrypoint,
                     prerender: true,
                 });
+
+                addWatchFile(import.meta.url);
 
                 updateConfig({
                     vite: {
@@ -77,14 +84,21 @@ function makeDevMiddleware(ghostRoutes: Set<string>) {
 
                 const writeHead = res.writeHead;
 
-                res.writeHead = function (code, ...args) {
-                    // Don't handle error 500 because Vite's dev server has a
-                    // special handle for it anyway.
-                    if (code >= 400 && code !== 500 && ghostRoutes.has(`/${code}`)) {
+                res.writeHead = function (code, headers, ...args) {
+                    if (
+                        headers
+                        // The content-type header is only normalized to lower case if the page is custom.
+                        && !('content-type' in headers)
+                        && code >= 400
+                        // Don't handle error 500 because Astro's dev server has a special handle for it anyway.
+                        && code !== 500
+                        && ghostRoutes.has(`/${code}`)
+                    ) {
+                        console.log(headers);
                         res.setHeader('location', `/${code}`);
                         code = 302;
                     }
-                    return writeHead.call(res, code, ...args);
+                    return writeHead.call(res, code, headers, ...args);
                 };
 
                 next();
